@@ -245,6 +245,62 @@
       0%   { transform: scale(0.9); opacity: 0.8; }
       100% { transform: scale(1.6); opacity: 0; }
     }
+
+    /* ── モバイル対応 ── */
+    @media (max-width: 540px) {
+      body {
+        align-items: flex-end;
+        overflow: hidden;
+      }
+
+      .card {
+        width: 100%;
+        border-radius: 28px 28px 0 0;
+        padding: 32px 28px 40px;
+        /* 背景が上部に見えるよう、カードの高さを抑える */
+        max-height: 65vh;
+      }
+
+      .title {
+        font-size: 0.85rem;
+        letter-spacing: 6px;
+        margin-bottom: 20px;
+      }
+
+      .display {
+        font-size: 4rem;
+        margin-bottom: 8px;
+      }
+
+      .progress-bar {
+        margin-bottom: 20px;
+      }
+
+      .input-row {
+        margin-bottom: 20px;
+        gap: 4px;
+      }
+
+      .input-group input {
+        width: 62px;
+        padding: 8px 4px;
+        font-size: 1.35rem;
+      }
+
+      .sep {
+        font-size: 1.6rem;
+      }
+
+      button {
+        padding: 12px 8px;
+        font-size: 0.68rem;
+      }
+
+      .message {
+        margin-top: 16px;
+        font-size: 0.68rem;
+      }
+    }
   </style>
 </head>
 <body>
