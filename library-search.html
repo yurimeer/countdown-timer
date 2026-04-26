@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Library Finder — 図書館を探す</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --gold:       #C9A84C;
+      --gold-light: #E8C97A;
+      --gold-dim:   #8B6914;
+      --glass-bg:   rgba(10, 8, 5, 0.55);
+      --glass-border: rgba(201, 168, 76, 0.25);
+      --card-bg:    rgba(12, 10, 6, 0.70);
+      --text:       #F0EAD6;
+      --text-dim:   #A89878;
+      --red:        #E07060;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      background: #0a0806;
+      color: var(--text);
+      overflow-x: hidden;
+    }
+
+    /* ── Hero background ── */
+    .bg {
+      position: fixed;
+      inset: 0;
+      background:
+        linear-gradient(to bottom, rgba(5,3,1,0.45) 0%, rgba(5,3,1,0.72) 100%),
+        url('https://images.unsplash.com/photo-1507842217343-583bb7270b66?w=1920&q=80')
+        center/cover no-repeat;
+      z-index: 0;
+    }
+
+    /* subtle vignette */
+    .bg::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.6) 100%);
+    }
+
+    /* ── Layout ── */
+    .page {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 56px 16px 80px;
+    }
+
+    /* ── Header ── */
+    header {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+
+    .header-eyebrow {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.7rem;
+      font-weight: 500;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 14px;
+    }
+
+    header h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(2.2rem, 6vw, 3.4rem);
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.15;
+      letter-spacing: 0.01em;
+    }
+
+    .header-rule {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin: 18px auto 0;
+      width: 260px;
+    }
+    .header-rule::before,
+    .header-rule::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(to right, transparent, var(--gold-dim));
+    }
+    .header-rule::after {
+      background: linear-gradient(to left, transparent, var(--gold-dim));
+    }
+    .header-rule-icon {
+      font-size: 0.7rem;
+      color: var(--gold);
+    }
+
+    /* ── Search panel ── */
+    .search-panel {
+      width: 100%;
+      max-width: 580px;
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: 4px;
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      padding: 36px 32px;
+      margin-bottom: 40px;
+      box-shadow: 0 32px 80px rgba(0,0,0,0.6), inset 0 1px 0 rgba(201,168,76,0.12);
+    }
+
+    /* ── Tabs ── */
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid rgba(201,168,76,0.18);
+      margin-bottom: 28px;
+      gap: 0;
+    }
+
+    .tab-btn {
+      flex: 1;
+      background: none;
+      border: none;
+      padding: 10px 8px;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.78rem;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
+      cursor: pointer;
+      position: relative;
+      transition: color 0.2s;
+    }
+
+    .tab-btn.active {
+      color: var(--gold-light);
+    }
+
+    .tab-btn.active::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 10%;
+      right: 10%;
+      height: 1px;
+      background: var(--gold);
+    }
+
+    .tab-btn:hover:not(.active) { color: var(--text); }
+
+    /* ── Tab panes ── */
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
+
+    /* ── Inputs ── */
+    .field {
+      margin-bottom: 14px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.7rem;
+      font-weight: 500;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--gold-dim);
+      margin-bottom: 7px;
+    }
+
+    input[type="text"],
+    input[type="tel"],
+    select {
+      width: 100%;
+      padding: 12px 16px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(201,168,76,0.2);
+      border-radius: 2px;
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s, background 0.2s;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+
+    input::placeholder { color: rgba(168,152,120,0.45); }
+
+    input:focus,
+    select:focus {
+      border-color: var(--gold);
+      background: rgba(201,168,76,0.06);
+    }
+
+    select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238B6914' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      padding-right: 36px;
+      cursor: pointer;
+    }
+
+    select option { background: #1a1408; color: var(--text); }
+
+    .field-row {
+      display: flex;
+      gap: 10px;
+    }
+    .field-row .field { flex: 1; margin-bottom: 0; }
+
+    /* ── Buttons ── */
+    .btn-primary {
+      width: 100%;
+      margin-top: 6px;
+      padding: 14px;
+      border: 1px solid var(--gold-dim);
+      border-radius: 2px;
+      background: linear-gradient(135deg, rgba(201,168,76,0.18), rgba(201,168,76,0.08));
+      color: var(--gold-light);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.82rem;
+      font-weight: 600;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s, color 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(135deg, rgba(201,168,76,0.30), rgba(201,168,76,0.14));
+      border-color: var(--gold);
+      color: #fff;
+    }
+
+    .btn-primary:active { opacity: 0.85; }
+    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .btn-icon { font-size: 1rem; }
+
+    /* ── Status ── */
+    #status {
+      width: 100%;
+      max-width: 580px;
+      text-align: center;
+      min-height: 22px;
+      margin-bottom: 20px;
+      font-size: 0.85rem;
+      letter-spacing: 0.03em;
+    }
+
+    .status-loading { color: var(--gold-light); }
+    .status-error   { color: var(--red); }
+    .status-info    { color: var(--text-dim); }
+
+    .spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 1.5px solid rgba(201,168,76,0.2);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+      vertical-align: middle;
+      margin-right: 7px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Results ── */
+    #results {
+      width: 100%;
+      max-width: 580px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .result-count {
+      font-size: 0.72rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--gold-dim);
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(201,168,76,0.12);
+    }
+
+    .library-card {
+      background: var(--card-bg);
+      border: 1px solid rgba(201,168,76,0.12);
+      border-radius: 3px;
+      padding: 20px 24px;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      transition: border-color 0.25s, background 0.25s;
+      margin-bottom: 10px;
+    }
+
+    .library-card:hover {
+      border-color: rgba(201,168,76,0.38);
+      background: rgba(20,15,5,0.75);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .card-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.3;
+    }
+
+    .card-distance {
+      flex-shrink: 0;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      color: var(--gold);
+      border: 1px solid rgba(201,168,76,0.3);
+      border-radius: 2px;
+      padding: 3px 10px;
+      white-space: nowrap;
+    }
+
+    .card-divider {
+      height: 1px;
+      background: rgba(201,168,76,0.1);
+      margin-bottom: 12px;
+    }
+
+    .card-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .meta-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 0.83rem;
+      color: var(--text-dim);
+      line-height: 1.5;
+    }
+
+    .meta-icon {
+      flex-shrink: 0;
+      width: 16px;
+      text-align: center;
+      opacity: 0.7;
+    }
+
+    .card-footer {
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(201,168,76,0.08);
+    }
+
+    .card-link {
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--gold-dim);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .card-link:hover { color: var(--gold-light); }
+
+    /* ── Responsive ── */
+    @media (max-width: 480px) {
+      .search-panel { padding: 24px 18px; }
+      .field-row { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="bg"></div>
+
+<div class="page">
+  <header>
+    <div class="header-eyebrow">Powered by Calil API</div>
+    <h1>Library Finder</h1>
+    <div class="header-rule">
+      <span class="header-rule-icon">◆</span>
+    </div>
+  </header>
+
+  <div class="search-panel">
+    <!-- Tabs -->
+    <div class="tabs" role="tablist">
+      <button class="tab-btn active" onclick="switchTab('geo')"   id="tab-geo">現在地</button>
+      <button class="tab-btn"        onclick="switchTab('zip')"   id="tab-zip">郵便番号</button>
+      <button class="tab-btn"        onclick="switchTab('area')"  id="tab-area">都道府県</button>
+    </div>
+
+    <!-- Tab: 現在地 -->
+    <div class="tab-pane active" id="pane-geo">
+      <button class="btn-primary" id="geoBtn" onclick="searchByGeo()">
+        <span class="btn-icon">⊕</span> 現在地から図書館を探す
+      </button>
+    </div>
+
+    <!-- Tab: 郵便番号 -->
+    <div class="tab-pane" id="pane-zip">
+      <div class="field">
+        <label for="zipInput">郵便番号</label>
+        <input type="tel" id="zipInput" placeholder="例：150-0001" maxlength="8"
+               onkeydown="if(event.key==='Enter') searchByZip()">
+      </div>
+      <button class="btn-primary" id="zipBtn" onclick="searchByZip()">
+        <span class="btn-icon">◎</span> 検索する
+      </button>
+    </div>
+
+    <!-- Tab: 都道府県 -->
+    <div class="tab-pane" id="pane-area">
+      <div class="field">
+        <label for="prefSelect">都道府県</label>
+        <select id="prefSelect">
+          <option value="">選択してください</option>
+          <option>北海道</option><option>青森県</option><option>岩手県</option>
+          <option>宮城県</option><option>秋田県</option><option>山形県</option>
+          <option>福島県</option><option>茨城県</option><option>栃木県</option>
+          <option>群馬県</option><option>埼玉県</option><option>千葉県</option>
+          <option>東京都</option><option>神奈川県</option><option>新潟県</option>
+          <option>富山県</option><option>石川県</option><option>福井県</option>
+          <option>山梨県</option><option>長野県</option><option>岐阜県</option>
+          <option>静岡県</option><option>愛知県</option><option>三重県</option>
+          <option>滋賀県</option><option>京都府</option><option>大阪府</option>
+          <option>兵庫県</option><option>奈良県</option><option>和歌山県</option>
+          <option>鳥取県</option><option>島根県</option><option>岡山県</option>
+          <option>広島県</option><option>山口県</option><option>徳島県</option>
+          <option>香川県</option><option>愛媛県</option><option>高知県</option>
+          <option>福岡県</option><option>佐賀県</option><option>長崎県</option>
+          <option>熊本県</option><option>大分県</option><option>宮崎県</option>
+          <option>鹿児島県</option><option>沖縄県</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="cityInput">市区町村（任意）</label>
+        <input type="text" id="cityInput" placeholder="例：渋谷区"
+               onkeydown="if(event.key==='Enter') searchByArea()">
+      </div>
+      <button class="btn-primary" id="areaBtn" onclick="searchByArea()">
+        <span class="btn-icon">◎</span> 検索する
+      </button>
+    </div>
+  </div>
+
+  <div id="status"></div>
+  <div id="results"></div>
+</div>
+
+<script>
+  const APPKEY = 'e4c66feaaf3f670b6a953d28618bf476';
+
+  /* ── Tab switching ── */
+  function switchTab(name) {
+    ['geo','zip','area'].forEach(t => {
+      document.getElementById('tab-' + t).classList.toggle('active', t === name);
+      document.getElementById('pane-' + t).classList.toggle('active', t === name);
+    });
+    setStatus('');
+    clearResults();
+  }
+
+  /* ── Status ── */
+  function setStatus(msg, type = 'info') {
+    const el = document.getElementById('status');
+    if (!msg) { el.innerHTML = ''; return; }
+    if (type === 'loading') {
+      el.innerHTML = `<span class="spinner"></span><span class="status-loading">${msg}</span>`;
+    } else if (type === 'error') {
+      el.innerHTML = `<span class="status-error">${msg}</span>`;
+    } else {
+      el.innerHTML = `<span class="status-info">${msg}</span>`;
+    }
+  }
+
+  function clearResults() {
+    document.getElementById('results').innerHTML = '';
+  }
+
+  /* ── Disable all search buttons ── */
+  function setLoading(on) {
+    ['geoBtn','zipBtn','areaBtn'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.disabled = on;
+    });
+  }
+
+  /* ── CALIL API (JSONP) ── */
+  function callCalilAPI(params) {
+    return new Promise((resolve, reject) => {
+      const cbName = 'calilCb_' + Date.now();
+      const qs = new URLSearchParams({ appkey: APPKEY, format: 'json', callback: cbName, limit: 10, ...params });
+      const script = document.createElement('script');
+
+      const timer = setTimeout(() => { cleanup(); reject(new Error('タイムアウトしました')); }, 10000);
+
+      function cleanup() {
+        clearTimeout(timer);
+        delete window[cbName];
+        script.parentNode && script.parentNode.removeChild(script);
+      }
+
+      window[cbName] = data => { cleanup(); resolve(data); };
+      script.onerror  = ()  => { cleanup(); reject(new Error('API呼び出しに失敗しました')); };
+      script.src = `https://api.calil.jp/library?${qs}`;
+      document.head.appendChild(script);
+    });
+  }
+
+  /* ── zipcloud API (fetch, CORS ok) ── */
+  async function geocodeByZip(zipcode) {
+    const clean = zipcode.replace(/[^0-9]/g, '');
+    if (clean.length !== 7) throw new Error('郵便番号は7桁で入力してください（例：1500001）');
+
+    const res = await fetch(`https://zipcloud.ibsnet.co.jp/api/search?zipcode=${clean}`);
+    if (!res.ok) throw new Error('郵便番号の変換に失敗しました');
+    const json = await res.json();
+
+    if (!json.results || json.results.length === 0) throw new Error('該当する郵便番号が見つかりませんでした');
+
+    const r = json.results[0];
+    return { lat: parseFloat(r.latitude), lng: parseFloat(r.longitude) };
+  }
+
+  /* ── Render ── */
+  function renderLibraries(libraries, showDistance) {
+    const container = document.getElementById('results');
+    container.innerHTML = '';
+
+    if (!libraries || libraries.length === 0) {
+      setStatus('図書館が見つかりませんでした。');
+      return;
+    }
+
+    setStatus('');
+
+    const countEl = document.createElement('div');
+    countEl.className = 'result-count';
+    countEl.textContent = `${libraries.length} Libraries Found`;
+    container.appendChild(countEl);
+
+    libraries.forEach(lib => {
+      const name     = lib.formal || lib.short || '（名称不明）';
+      const address  = lib.address || '';
+      const tel      = lib.tel     || '';
+      const url      = lib.url     || '';
+      const distance = lib.distance;
+
+      const card = document.createElement('div');
+      card.className = 'library-card';
+
+      let html = `<div class="card-header">
+        <div class="card-title">${escHtml(name)}</div>`;
+
+      if (showDistance && distance != null) {
+        html += `<div class="card-distance">${parseFloat(distance).toFixed(1)} km</div>`;
+      }
+      html += `</div><div class="card-divider"></div><div class="card-meta">`;
+      if (address) html += `<div class="meta-row"><span class="meta-icon">◻</span><span>${escHtml(address)}</span></div>`;
+      if (tel)     html += `<div class="meta-row"><span class="meta-icon">◈</span><span>${escHtml(tel)}</span></div>`;
+      html += `</div>`;
+
+      if (url) {
+        html += `<div class="card-footer">
+          <a class="card-link" href="${escHtml(url)}" target="_blank" rel="noopener">Visit Website →</a>
+        </div>`;
+      }
+
+      card.innerHTML = html;
+      container.appendChild(card);
+    });
+  }
+
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  /* ── Search handlers ── */
+  async function searchByGeo() {
+    if (!navigator.geolocation) {
+      setStatus('このブラウザは位置情報に対応していません。', 'error');
+      return;
+    }
+    clearResults();
+    setStatus('位置情報を取得中…', 'loading');
+    setLoading(true);
+
+    navigator.geolocation.getCurrentPosition(
+      async ({ coords: { latitude, longitude } }) => {
+        setStatus('図書館を検索中…', 'loading');
+        try {
+          const data = await callCalilAPI({ geocode: `${longitude},${latitude}` });
+          renderLibraries(data, true);
+        } catch (e) {
+          setStatus(e.message, 'error');
+        } finally {
+          setLoading(false);
+        }
+      },
+      err => {
+        setLoading(false);
+        const msgs = {
+          1: '位置情報の使用が拒否されました。',
+          2: '位置情報を取得できませんでした。',
+          3: '位置情報の取得がタイムアウトしました。',
+        };
+        setStatus(msgs[err.code] || '位置情報の取得に失敗しました。', 'error');
+      },
+      { timeout: 10000 }
+    );
+  }
+
+  async function searchByZip() {
+    const zip = document.getElementById('zipInput').value.trim();
+    if (!zip) { setStatus('郵便番号を入力してください。', 'error'); return; }
+
+    clearResults();
+    setStatus('郵便番号を検索中…', 'loading');
+    setLoading(true);
+
+    try {
+      const { lat, lng } = await geocodeByZip(zip);
+      setStatus('図書館を検索中…', 'loading');
+      const data = await callCalilAPI({ geocode: `${lng},${lat}` });
+      renderLibraries(data, true);
+    } catch (e) {
+      setStatus(e.message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function searchByArea() {
+    const pref = document.getElementById('prefSelect').value;
+    const city = document.getElementById('cityInput').value.trim();
+    if (!pref) { setStatus('都道府県を選択してください。', 'error'); return; }
+
+    clearResults();
+    setStatus('図書館を検索中…', 'loading');
+    setLoading(true);
+
+    const params = { pref };
+    if (city) params.city = city;
+
+    try {
+      const data = await callCalilAPI(params);
+      renderLibraries(data, false);
+    } catch (e) {
+      setStatus(e.message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  }
+</script>
+
+</body>
+</html>
