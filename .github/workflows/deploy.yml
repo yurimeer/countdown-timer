@@ -1,0 +1,30 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create Supabase config from secrets
+        run: |
+          cat > supabase-config.js << 'ENDOFFILE'
+          const SUPABASE_URL = 'PLACEHOLDER_URL';
+          const SUPABASE_ANON_KEY = 'PLACEHOLDER_KEY';
+          ENDOFFILE
+          sed -i "s|PLACEHOLDER_URL|${{ secrets.SUPABASE_URL }}|g" supabase-config.js
+          sed -i "s|PLACEHOLDER_KEY|${{ secrets.SUPABASE_ANON_KEY }}|g" supabase-config.js
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./
+          exclude_assets: '.github,*.md,デスクトップ整理,*.example.js,.gitignore,.claude'

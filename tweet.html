@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ツイート</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #000;
+      color: #e7e9ea;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ========== AUTH ========== */
+    #auth-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    #auth-section h1 {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 32px;
+    }
+
+    .auth-form {
+      width: 100%;
+      max-width: 360px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .auth-form input {
+      background: #000;
+      border: 1px solid #333;
+      border-radius: 4px;
+      color: #e7e9ea;
+      font-size: 16px;
+      padding: 12px 16px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .auth-form input:focus { border-color: #1d9bf0; }
+
+    .auth-form input::placeholder { color: #71767b; }
+
+    .btn {
+      background: #1d9bf0;
+      border: none;
+      border-radius: 9999px;
+      color: #fff;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 700;
+      padding: 12px 24px;
+      transition: background 0.2s;
+    }
+
+    .btn:hover { background: #1a8cd8; }
+
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-outline {
+      background: transparent;
+      border: 1px solid #333;
+      color: #e7e9ea;
+    }
+
+    .btn-outline:hover { background: #111; }
+
+    .auth-divider {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 8px 0;
+      color: #71767b;
+      font-size: 13px;
+    }
+
+    .auth-divider::before,
+    .auth-divider::after {
+      content: '';
+      flex: 1;
+      border-top: 1px solid #333;
+    }
+
+    #auth-error {
+      color: #f4212e;
+      font-size: 13px;
+      text-align: center;
+      min-height: 18px;
+    }
+
+    /* ========== APP ========== */
+    #app-section { display: none; }
+
+    header {
+      position: sticky;
+      top: 0;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid #2f3336;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      z-index: 10;
+    }
+
+    header h1 { font-size: 20px; font-weight: 700; }
+
+    .btn-sm {
+      font-size: 13px;
+      padding: 6px 16px;
+    }
+
+    .main {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* ========== POST FORM ========== */
+    .post-form {
+      border-bottom: 1px solid #2f3336;
+      padding: 16px;
+    }
+
+    .post-form textarea {
+      background: transparent;
+      border: none;
+      color: #e7e9ea;
+      font-size: 20px;
+      outline: none;
+      resize: none;
+      width: 100%;
+      min-height: 80px;
+    }
+
+    .post-form textarea::placeholder { color: #71767b; }
+
+    .post-form-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 12px;
+    }
+
+    .char-count {
+      color: #71767b;
+      font-size: 13px;
+    }
+
+    .char-count.warn { color: #ffd400; }
+    .char-count.over { color: #f4212e; }
+
+    /* ========== TIMELINE ========== */
+    .post-item {
+      border-bottom: 1px solid #2f3336;
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .post-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .post-author {
+      color: #71767b;
+      font-size: 13px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .post-time {
+      color: #71767b;
+      font-size: 12px;
+      flex-shrink: 0;
+    }
+
+    .post-content {
+      font-size: 15px;
+      line-height: 1.5;
+      word-break: break-word;
+      white-space: pre-wrap;
+    }
+
+    .btn-delete {
+      background: transparent;
+      border: 1px solid #f4212e;
+      border-radius: 9999px;
+      color: #f4212e;
+      cursor: pointer;
+      font-size: 12px;
+      padding: 3px 10px;
+      flex-shrink: 0;
+    }
+
+    .btn-delete:hover { background: rgba(244, 33, 46, 0.1); }
+
+    #timeline-empty {
+      padding: 40px 16px;
+      text-align: center;
+      color: #71767b;
+    }
+
+    #status-msg {
+      padding: 8px 16px;
+      font-size: 13px;
+      color: #1d9bf0;
+      min-height: 32px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ======== 認証画面 ======== -->
+<div id="auth-section">
+  <h1>ツイート</h1>
+  <div class="auth-form">
+    <input type="email" id="email" placeholder="メールアドレス" autocomplete="email">
+    <input type="password" id="password" placeholder="パスワード" autocomplete="current-password">
+    <p id="auth-error"></p>
+    <button class="btn" onclick="login()">ログイン</button>
+    <div class="auth-divider">または</div>
+    <button class="btn btn-outline" onclick="signup()">新規登録</button>
+  </div>
+</div>
+
+<!-- ======== アプリ画面 ======== -->
+<div id="app-section">
+  <header>
+    <h1>ホーム</h1>
+    <div style="display:flex;align-items:center;gap:12px">
+      <span id="user-label" style="color:#71767b;font-size:13px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+      <button class="btn btn-outline btn-sm" onclick="logout()">ログアウト</button>
+    </div>
+  </header>
+
+  <div class="main">
+    <div class="post-form">
+      <textarea id="post-content" placeholder="いまどうしてる？" maxlength="280" oninput="updateCharCount()"></textarea>
+      <div class="post-form-footer">
+        <span class="char-count" id="char-count">280</span>
+        <button class="btn btn-sm" id="post-btn" onclick="submitPost()">投稿</button>
+      </div>
+    </div>
+
+    <div id="status-msg"></div>
+    <div id="timeline"></div>
+    <div id="timeline-empty" style="display:none">まだ投稿がありません。最初の一言をどうぞ！</div>
+  </div>
+</div>
+
+<script>
+// Supabase クライアント初期化
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let currentUser = null;
+
+// ======== 認証 ========
+async function login() {
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  setAuthError('');
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  if (error) setAuthError(error.message);
+}
+
+async function signup() {
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  setAuthError('');
+  if (password.length < 6) { setAuthError('パスワードは6文字以上必要です'); return; }
+  const { error } = await sb.auth.signUp({ email, password });
+  if (error) setAuthError(error.message);
+  else setAuthError('確認メールを送信しました。メールを確認してください。');
+}
+
+async function logout() {
+  await sb.auth.signOut();
+}
+
+function setAuthError(msg) {
+  document.getElementById('auth-error').textContent = msg;
+}
+
+// ======== 投稿 ========
+function updateCharCount() {
+  const len = document.getElementById('post-content').value.length;
+  const remaining = 280 - len;
+  const el = document.getElementById('char-count');
+  el.textContent = remaining;
+  el.className = 'char-count' + (remaining <= 20 ? ' warn' : '') + (remaining < 0 ? ' over' : '');
+  document.getElementById('post-btn').disabled = len === 0 || remaining < 0;
+}
+
+async function submitPost() {
+  const content = document.getElementById('post-content').value.trim();
+  if (!content || !currentUser) return;
+
+  const btn = document.getElementById('post-btn');
+  btn.disabled = true;
+
+  const { error } = await sb.from('posts').insert({ user_id: currentUser.id, content });
+  if (error) {
+    showStatus('投稿に失敗しました: ' + error.message);
+  } else {
+    document.getElementById('post-content').value = '';
+    updateCharCount();
+  }
+  btn.disabled = false;
+}
+
+async function deletePost(id) {
+  const { error } = await sb.from('posts').delete().eq('id', id);
+  if (error) showStatus('削除に失敗しました: ' + error.message);
+}
+
+// ======== タイムライン ========
+async function loadTimeline() {
+  const { data, error } = await sb
+    .from('posts')
+    .select('id, user_id, content, created_at')
+    .order('created_at', { ascending: false })
+    .limit(100);
+
+  if (error) { showStatus('読み込みエラー: ' + error.message); return; }
+  renderTimeline(data || []);
+}
+
+function renderTimeline(posts) {
+  const el = document.getElementById('timeline');
+  const empty = document.getElementById('timeline-empty');
+  if (posts.length === 0) { el.innerHTML = ''; empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+  el.innerHTML = posts.map(p => {
+    const isOwn = currentUser && p.user_id === currentUser.id;
+    const shortId = p.user_id.slice(0, 8);
+    const date = new Date(p.created_at).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    return `
+      <div class="post-item">
+        <div class="post-meta">
+          <span class="post-author">@${shortId}</span>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="post-time">${date}</span>
+            ${isOwn ? `<button class="btn-delete" onclick="deletePost('${p.id}')">削除</button>` : ''}
+          </div>
+        </div>
+        <div class="post-content">${escapeHtml(p.content)}</div>
+      </div>`;
+  }).join('');
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function showStatus(msg) {
+  const el = document.getElementById('status-msg');
+  el.textContent = msg;
+  setTimeout(() => { el.textContent = ''; }, 3000);
+}
+
+// ======== リアルタイム ========
+function subscribeTimeline() {
+  sb.channel('posts-channel')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, () => loadTimeline())
+    .subscribe();
+}
+
+// ======== 画面切り替え ========
+function showApp(user) {
+  currentUser = user;
+  document.getElementById('auth-section').style.display = 'none';
+  document.getElementById('app-section').style.display = 'block';
+  document.getElementById('user-label').textContent = user.email;
+  loadTimeline();
+  subscribeTimeline();
+}
+
+function showAuth() {
+  currentUser = null;
+  document.getElementById('auth-section').style.display = '';
+  document.getElementById('app-section').style.display = 'none';
+  document.getElementById('timeline').innerHTML = '';
+}
+
+// ======== 起動 ========
+sb.auth.onAuthStateChange((_event, session) => {
+  if (session?.user) showApp(session.user);
+  else showAuth();
+});
+
+sb.auth.getSession().then(({ data: { session } }) => {
+  if (session?.user) showApp(session.user);
+});
+</script>
+</body>
+</html>
