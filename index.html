@@ -4,155 +4,255 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>タイマー</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Montserrat:wght@300;400;600&display=swap" rel="stylesheet">
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: 'Segoe UI', sans-serif;
-      background: #1a1a2e;
-      color: #eee;
+      font-family: 'Montserrat', sans-serif;
+      min-height: 100vh;
       display: flex;
       justify-content: center;
       align-items: center;
-      min-height: 100vh;
+      overflow: hidden;
+      position: relative;
     }
 
-    .container {
+    /* ── 背景画像 ── */
+    .bg {
+      position: fixed;
+      inset: 0;
+      background-image: url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1920&q=85');
+      background-size: cover;
+      background-position: center 60%;
+      filter: brightness(0.88);
+      z-index: 0;
+    }
+
+    /* ── グラデーションオーバーレイ ── */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: linear-gradient(
+        160deg,
+        rgba(10, 10, 30, 0.35) 0%,
+        rgba(80, 30, 10, 0.25) 50%,
+        rgba(10, 10, 40, 0.5) 100%
+      );
+      z-index: 1;
+    }
+
+    /* ── メインカード ── */
+    .card {
+      position: relative;
+      z-index: 10;
+      width: min(420px, 92vw);
+      background: rgba(255, 245, 230, 0.10);
+      backdrop-filter: blur(22px) saturate(1.4);
+      -webkit-backdrop-filter: blur(22px) saturate(1.4);
+      border: 1px solid rgba(255, 220, 170, 0.25);
+      border-radius: 28px;
+      padding: 48px 44px 44px;
       text-align: center;
-      background: #16213e;
-      border-radius: 20px;
-      padding: 40px 60px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      box-shadow:
+        0 8px 48px rgba(0, 0, 0, 0.35),
+        0 1px 0 rgba(255, 220, 150, 0.2) inset;
     }
 
-    h1 {
-      font-size: 1.2rem;
-      letter-spacing: 4px;
-      color: #a0aec0;
-      margin-bottom: 30px;
-      text-transform: uppercase;
-    }
-
-    .display {
-      font-size: 5rem;
+    /* ── タイトル ── */
+    .title {
+      font-family: 'Cormorant Garamond', serif;
       font-weight: 300;
-      letter-spacing: 4px;
-      font-variant-numeric: tabular-nums;
-      color: #e2e8f0;
-      margin-bottom: 10px;
-      min-width: 320px;
+      font-size: 1.05rem;
+      letter-spacing: 8px;
+      text-transform: uppercase;
+      color: rgba(255, 220, 160, 0.85);
+      margin-bottom: 36px;
     }
 
-    .display.running { color: #68d391; }
-    .display.finished { color: #fc8181; }
+    /* ── 時刻表示 ── */
+    .display {
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 300;
+      font-size: 5.4rem;
+      letter-spacing: 3px;
+      font-variant-numeric: tabular-nums;
+      color: rgba(255, 248, 235, 0.97);
+      text-shadow: 0 0 40px rgba(255, 180, 80, 0.4);
+      line-height: 1;
+      margin-bottom: 12px;
+      transition: color 0.5s, text-shadow 0.5s;
+    }
 
+    .display.running {
+      color: #ffd580;
+      text-shadow: 0 0 50px rgba(255, 200, 80, 0.6), 0 0 10px rgba(255, 220, 100, 0.4);
+    }
+
+    .display.finished {
+      color: #ff8fa3;
+      text-shadow: 0 0 50px rgba(255, 100, 130, 0.6);
+      animation: pulse 1s ease-in-out infinite alternate;
+    }
+
+    @keyframes pulse {
+      from { opacity: 0.8; }
+      to   { opacity: 1; }
+    }
+
+    /* ── プログレスバー ── */
     .progress-bar {
       width: 100%;
-      height: 4px;
-      background: #2d3748;
-      border-radius: 2px;
-      margin-bottom: 30px;
+      height: 3px;
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 99px;
+      margin-bottom: 36px;
       overflow: hidden;
     }
 
     .progress-fill {
       height: 100%;
-      background: #68d391;
-      border-radius: 2px;
-      transition: width 0.5s linear;
+      background: linear-gradient(90deg, #f7971e, #ffd200, #ff6b6b);
+      border-radius: 99px;
+      transition: width 0.8s cubic-bezier(.4,0,.2,1);
       width: 0%;
+      box-shadow: 0 0 8px rgba(255, 180, 50, 0.7);
     }
 
+    /* ── 入力フィールド ── */
     .input-row {
       display: flex;
-      gap: 8px;
+      gap: 6px;
       justify-content: center;
-      align-items: center;
-      margin-bottom: 30px;
+      align-items: flex-end;
+      margin-bottom: 36px;
     }
 
     .input-group {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 4px;
+      gap: 6px;
     }
 
     .input-group label {
-      font-size: 0.7rem;
-      color: #718096;
-      letter-spacing: 2px;
+      font-size: 0.6rem;
+      letter-spacing: 3px;
       text-transform: uppercase;
+      color: rgba(255, 210, 150, 0.7);
     }
 
     .input-group input {
-      width: 70px;
-      padding: 10px;
-      font-size: 1.4rem;
+      width: 72px;
+      padding: 10px 6px;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.6rem;
+      font-weight: 400;
       text-align: center;
-      background: #2d3748;
-      border: 2px solid #4a5568;
-      border-radius: 8px;
-      color: #e2e8f0;
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 210, 150, 0.25);
+      border-radius: 12px;
+      color: rgba(255, 245, 220, 0.95);
       outline: none;
-      transition: border-color 0.2s;
+      transition: border-color 0.25s, background 0.25s, box-shadow 0.25s;
+      -moz-appearance: textfield;
     }
 
-    .input-group input:focus { border-color: #68d391; }
+    .input-group input::-webkit-outer-spin-button,
+    .input-group input::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+    .input-group input:focus {
+      border-color: rgba(255, 200, 100, 0.6);
+      background: rgba(255, 255, 255, 0.12);
+      box-shadow: 0 0 0 3px rgba(255, 190, 80, 0.12);
+    }
 
     .sep {
-      font-size: 1.8rem;
-      color: #4a5568;
-      margin-top: 18px;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 2rem;
+      font-weight: 300;
+      color: rgba(255, 200, 130, 0.5);
+      padding-bottom: 6px;
     }
 
+    /* ── ボタン ── */
     .buttons {
       display: flex;
-      gap: 12px;
+      gap: 10px;
       justify-content: center;
     }
 
     button {
-      padding: 12px 28px;
-      font-size: 0.95rem;
+      flex: 1;
+      padding: 13px 10px;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 0.72rem;
       font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
       border: none;
-      border-radius: 10px;
+      border-radius: 14px;
       cursor: pointer;
-      letter-spacing: 1px;
-      transition: transform 0.1s, opacity 0.2s;
+      transition: transform 0.12s, box-shadow 0.2s, opacity 0.2s;
     }
 
-    button:active { transform: scale(0.96); }
-    button:disabled { opacity: 0.3; cursor: default; }
+    button:active { transform: scale(0.95); }
+    button:disabled { opacity: 0.3; cursor: default; transform: none; }
 
     #btnStart {
-      background: #48bb78;
-      color: #fff;
+      background: linear-gradient(135deg, #f7971e 0%, #ffd200 100%);
+      color: #3a2000;
+      box-shadow: 0 4px 20px rgba(247, 151, 30, 0.45);
+    }
+
+    #btnStart:not(:disabled):hover {
+      box-shadow: 0 6px 28px rgba(247, 151, 30, 0.65);
+      transform: translateY(-1px);
     }
 
     #btnPause {
-      background: #ed8936;
-      color: #fff;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 200, 150, 0.3);
+      color: rgba(255, 235, 200, 0.9);
+    }
+
+    #btnPause:not(:disabled):hover {
+      background: rgba(255, 255, 255, 0.16);
     }
 
     #btnReset {
-      background: #4a5568;
-      color: #e2e8f0;
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: rgba(255, 235, 210, 0.65);
     }
 
+    #btnReset:hover {
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    /* ── メッセージ ── */
     .message {
-      margin-top: 20px;
-      font-size: 1rem;
-      color: #fc8181;
-      min-height: 24px;
-      letter-spacing: 2px;
+      margin-top: 24px;
+      font-size: 0.75rem;
+      letter-spacing: 3px;
+      color: #ff8fa3;
+      min-height: 20px;
+      text-transform: uppercase;
+    }
+
+    /* ── 波紋アニメーション（完了時） ── */
+    @keyframes ripple {
+      0%   { transform: scale(0.9); opacity: 0.8; }
+      100% { transform: scale(1.6); opacity: 0; }
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>タイマー</h1>
+  <div class="bg"></div>
+  <div class="overlay"></div>
+
+  <div class="card">
+    <p class="title">Timer</p>
 
     <div class="display" id="display">00:00:00</div>
     <div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
@@ -160,24 +260,24 @@
     <div class="input-row">
       <div class="input-group">
         <label>時間</label>
-        <input type="number" id="inputH" min="0" max="23" value="0" placeholder="0">
+        <input type="number" id="inputH" min="0" max="23" value="0">
       </div>
       <span class="sep">:</span>
       <div class="input-group">
         <label>分</label>
-        <input type="number" id="inputM" min="0" max="59" value="5" placeholder="0">
+        <input type="number" id="inputM" min="0" max="59" value="5">
       </div>
       <span class="sep">:</span>
       <div class="input-group">
         <label>秒</label>
-        <input type="number" id="inputS" min="0" max="59" value="0" placeholder="0">
+        <input type="number" id="inputS" min="0" max="59" value="0">
       </div>
     </div>
 
     <div class="buttons">
-      <button id="btnStart" onclick="start()">スタート</button>
-      <button id="btnPause" onclick="pause()" disabled>一時停止</button>
-      <button id="btnReset" onclick="reset()">リセット</button>
+      <button id="btnStart" onclick="start()">Start</button>
+      <button id="btnPause" onclick="pause()" disabled>Pause</button>
+      <button id="btnReset" onclick="reset()">Reset</button>
     </div>
 
     <div class="message" id="message"></div>
@@ -189,9 +289,9 @@
     let interval = null;
     let running = false;
 
-    const display = document.getElementById('display');
+    const display  = document.getElementById('display');
     const progress = document.getElementById('progress');
-    const message = document.getElementById('message');
+    const message  = document.getElementById('message');
     const btnStart = document.getElementById('btnStart');
     const btnPause = document.getElementById('btnPause');
 
@@ -237,12 +337,11 @@
           clearInterval(interval);
           running = false;
           display.className = 'display finished';
-          message.textContent = '時間になりました！';
+          message.textContent = '✦  時間になりました  ✦';
           btnStart.disabled = false;
           btnPause.disabled = true;
-          new Audio('data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAA...').play().catch(()=>{});
           if (Notification.permission === 'granted') {
-            new Notification('タイマー', { body: '時間になりました！' });
+            new Notification('🌅 タイマー終了', { body: '時間になりました！' });
           }
         }
       }, 1000);
@@ -254,7 +353,7 @@
       running = false;
       display.className = 'display';
       btnStart.disabled = false;
-      btnStart.textContent = '再開';
+      btnStart.textContent = 'Resume';
       btnPause.disabled = true;
     }
 
@@ -268,14 +367,11 @@
       display.className = 'display';
       message.textContent = '';
       btnStart.disabled = false;
-      btnStart.textContent = 'スタート';
+      btnStart.textContent = 'Start';
       btnPause.disabled = true;
     }
 
-    // 通知許可をリクエスト
     if ('Notification' in window) Notification.requestPermission();
-
-    // 初期表示
     updateDisplay(0);
   </script>
 </body>
