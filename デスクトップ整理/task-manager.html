@@ -1,0 +1,1175 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>タスク管理</title>
+  <style>
+    :root {
+      --accent:       #e11d48;
+      --accent-hover: #be123c;
+      --accent-light: #fda4af;
+      --accent-bg:    #fff1f2;
+      --text:         #18181b;
+      --text-muted:   #71717a;
+      --text-subtle:  #a1a1aa;
+      --border:       #e4e4e7;
+      --bg:           #ffffff;
+      --bg-sub:       #fafafa;
+      --radius:       8px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ── Header ── */
+    header {
+      height: 50px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      gap: 0;
+      background: white;
+      flex-shrink: 0;
+    }
+    .h-logo { font-size: 18px; margin-right: 8px; }
+    .h-title { font-weight: 700; font-size: 15px; letter-spacing: -0.01em; margin-right: 20px; }
+
+    /* Tab nav */
+    .tab-nav { display: flex; align-items: stretch; height: 100%; gap: 2px; }
+    .tab-btn {
+      display: flex; align-items: center; gap: 5px;
+      padding: 0 16px;
+      font-size: 13px; font-weight: 500;
+      color: var(--text-muted);
+      background: none; border: none;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: color 0.15s, border-color 0.15s;
+      font-family: inherit;
+    }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    .h-space { flex: 1; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 6px 13px;
+      border-radius: var(--radius); border: 1px solid var(--border);
+      background: white; font-size: 13px; cursor: pointer;
+      color: var(--text); font-family: inherit;
+      transition: background 0.12s, border-color 0.12s;
+    }
+    .btn:hover { background: var(--bg-sub); }
+    .btn-rose  { background: var(--accent); color: white; border-color: var(--accent); }
+    .btn-rose:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+
+    /* ── App shell ── */
+    .app { display: flex; height: calc(100vh - 50px); }
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+
+    /* ── View wrapper ── */
+    .view { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .view.hidden { display: none; }
+
+    /* ══════════════════════════════
+       HOME VIEW  (calendar)
+    ══════════════════════════════ */
+    .home-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      background: #f4f4f6;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    /* Section (overdue / no-date) */
+    .cal-section {
+      background: white;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+    .sec-head {
+      padding: 10px 16px;
+      display: flex; align-items: center; gap: 8px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-sub);
+      font-size: 13px; font-weight: 600; color: var(--text);
+      cursor: pointer;
+      user-select: none;
+    }
+    .sec-head.overdue { color: var(--accent); }
+    .sec-head.nodate  { color: #7c3aed; }
+    .sec-count {
+      margin-left: auto;
+      font-size: 11px; font-weight: 400;
+      color: var(--text-muted);
+      background: var(--border);
+      padding: 1px 7px;
+      border-radius: 20px;
+    }
+    .sec-toggle { font-size: 10px; color: var(--text-subtle); transition: transform 0.2s; }
+    .sec-toggle.open { transform: rotate(90deg); }
+    .sec-chips {
+      padding: 12px 16px;
+      display: flex; flex-wrap: wrap; gap: 8px;
+    }
+
+    /* ── Week block ── */
+    .week-block {
+      background: white;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+    .week-block.is-current { border-color: var(--accent-light); box-shadow: 0 0 0 1px var(--accent-light); }
+
+    .week-head {
+      padding: 10px 16px;
+      display: flex; align-items: center; gap: 10px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-sub);
+    }
+    .wk-label {
+      font-size: 12px; font-weight: 700; padding: 2px 8px;
+      border-radius: 20px; background: var(--border); color: var(--text-muted);
+    }
+    .week-block.is-current .wk-label {
+      background: var(--accent-bg); color: var(--accent);
+    }
+    .wk-range { font-size: 12px; color: var(--text-muted); }
+    .wk-empty { margin-left: auto; font-size: 11px; color: var(--text-subtle); }
+
+    /* Day grid */
+    .week-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+    }
+    .day-col {
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      min-height: 96px;
+    }
+    .day-col:last-child { border-right: none; }
+    .day-col.is-today  { background: var(--accent-bg); }
+    .day-col.is-past   { background: #fafafa; }
+
+    .day-head {
+      padding: 6px 8px 5px;
+      display: flex; flex-direction: column; align-items: center; gap: 2px;
+      border-bottom: 1px solid var(--border);
+    }
+    .day-name {
+      font-size: 11px; font-weight: 500; color: var(--text-muted);
+    }
+    .day-col.is-sat .day-name { color: #2563eb; }
+    .day-col.is-sun .day-name { color: var(--accent); }
+    .day-col.is-past .day-name { color: var(--text-subtle); }
+
+    .day-num {
+      font-size: 14px; font-weight: 600; color: var(--text);
+      width: 27px; height: 27px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 50%;
+    }
+    .day-col.is-today .day-num { background: var(--accent); color: white; }
+    .day-col.is-past .day-num  { color: var(--text-subtle); }
+
+    .day-tasks {
+      flex: 1;
+      padding: 5px 5px;
+      display: flex; flex-direction: column; gap: 3px;
+    }
+
+    /* ── Task chip (calendar) ── */
+    .cal-chip {
+      padding: 5px 7px;
+      border-radius: 5px;
+      border: 1px solid var(--border);
+      border-left: 3px solid #cbd5e1;
+      background: white;
+      cursor: pointer;
+      transition: box-shadow 0.12s, transform 0.1s;
+      display: flex; flex-direction: column; gap: 2px;
+      min-width: 0;
+    }
+    .cal-chip:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.1); transform: translateY(-1px); }
+    .cal-chip.active-chip { box-shadow: 0 0 0 2px var(--accent); }
+    .cal-chip.p-high   { border-left-color: #ef4444; }
+    .cal-chip.p-medium { border-left-color: #f59e0b; }
+    .cal-chip.p-low    { border-left-color: #22c55e; }
+    .cal-chip.chip-done { opacity: 0.4; }
+    .cal-chip.chip-over { border-left-color: var(--accent); background: var(--accent-bg); }
+
+    .chip-ttl {
+      font-size: 12px; font-weight: 500;
+      color: var(--text);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .chip-st { font-size: 10px; color: var(--text-subtle); font-weight: 500; }
+
+    /* Section chips (wider) */
+    .sec-chips .cal-chip {
+      min-width: 110px; max-width: 220px;
+      flex: 0 0 auto;
+    }
+
+    /* ══════════════════════════════
+       LIST VIEW  (table)
+    ══════════════════════════════ */
+    .toolbar {
+      padding: 10px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+      flex-shrink: 0; background: white;
+    }
+    .t-input, .t-select {
+      padding: 5px 10px;
+      border: 1px solid var(--border); border-radius: 6px;
+      font-size: 13px; outline: none;
+      background: white; color: var(--text); font-family: inherit;
+      transition: border-color 0.12s;
+    }
+    .t-input:focus, .t-select:focus { border-color: var(--accent); }
+    #search { width: 190px; }
+    .count-chip {
+      margin-left: auto;
+      font-size: 12px; color: var(--text-muted);
+      background: var(--bg-sub);
+      padding: 3px 11px; border-radius: 20px; border: 1px solid var(--border);
+    }
+
+    .table-wrap { flex: 1; overflow-y: auto; background: white; }
+    table { width: 100%; border-collapse: collapse; }
+    thead th {
+      text-align: left; padding: 8px 10px;
+      font-size: 12px; font-weight: 500; color: var(--text-muted);
+      border-bottom: 2px solid var(--border);
+      white-space: nowrap;
+      background: white; position: sticky; top: 0; z-index: 5;
+    }
+    tbody tr { cursor: pointer; border-bottom: 1px solid var(--border); transition: background 0.08s; }
+    tbody tr:hover td { background: var(--bg-sub); }
+    tbody tr.is-active td { background: var(--accent-bg); }
+    td { padding: 0; vertical-align: middle; }
+
+    .c-cb { width: 44px; } .c-title { min-width: 200px; } .c-who { width: 130px; }
+    .c-stat { width: 100px; } .c-pri { width: 76px; } .c-date { width: 108px; }
+    .c-tags { min-width: 100px; } .c-del { width: 36px; }
+
+    .td-p  { padding: 10px 10px; }
+    .td-cb { padding: 10px 6px 10px 14px; }
+    .td-dl { padding: 10px 6px; }
+
+    input[type="checkbox"].row-cb {
+      width: 15px; height: 15px; accent-color: var(--accent); cursor: pointer; display: block;
+    }
+    .title-wrap { display: flex; flex-direction: column; gap: 4px; }
+    .row-ttl { font-size: 14px; font-weight: 500; color: var(--text); }
+    .row-ttl.s-done { text-decoration: line-through; color: var(--text-subtle); font-weight: 400; }
+
+    .row-prog { display: flex; align-items: center; gap: 5px; }
+    .prog-track { height: 3px; width: 72px; background: var(--border); border-radius: 2px; overflow: hidden; }
+    .prog-fill  { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.3s; }
+    .prog-num   { font-size: 11px; color: var(--text-subtle); }
+
+    .avatar {
+      width: 22px; height: 22px; border-radius: 50%;
+      background: var(--accent-bg); color: var(--accent);
+      font-size: 10px; font-weight: 700;
+      display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .who-cell { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-muted); }
+
+    .badge {
+      display: inline-flex; align-items: center;
+      padding: 2px 8px; border-radius: 20px;
+      font-size: 11px; font-weight: 600; white-space: nowrap; line-height: 1.6;
+    }
+    .s-todo       { background: #f4f4f5; color: #52525b; }
+    .s-inprogress { background: #fef9c3; color: #854d0e; }
+    .s-done       { background: #dcfce7; color: #166534; }
+    .p-high       { background: #fee2e2; color: #b91c1c; }
+    .p-medium     { background: #fef3c7; color: #92400e; }
+    .p-low        { background: #d1fae5; color: #065f46; }
+    .tag-chip     { background: #f4f4f5; color: #52525b; margin-right: 3px; }
+
+    .date-txt { font-size: 12px; color: var(--text-muted); }
+    .date-over { color: var(--accent) !important; font-weight: 600; }
+
+    .row-del {
+      opacity: 0; background: none; border: none; cursor: pointer;
+      padding: 4px 5px; border-radius: 4px;
+      color: var(--text-subtle); font-size: 13px; display: block; transition: opacity 0.1s;
+    }
+    tr:hover .row-del { opacity: 1; }
+    .row-del:hover { background: #fee2e2; color: #b91c1c; }
+
+    .empty-row td {
+      padding: 64px 0; text-align: center;
+      color: var(--text-subtle); font-size: 14px; cursor: default;
+    }
+    .empty-row:hover td { background: transparent !important; }
+
+    /* ══════════════════════════════
+       SIDE PANEL
+    ══════════════════════════════ */
+    .side {
+      width: 0; overflow: hidden;
+      border-left: 1px solid transparent;
+      transition: width 0.2s ease;
+      flex-shrink: 0; background: white;
+      display: flex; flex-direction: column;
+    }
+    .side.open { width: 380px; border-left-color: var(--border); overflow-y: auto; }
+
+    .panel-head {
+      padding: 18px 20px 14px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: flex-start; gap: 8px; flex-shrink: 0;
+    }
+    .panel-title {
+      flex: 1;
+      font-size: 18px; font-weight: 700;
+      border: none; outline: none; background: transparent;
+      color: var(--text); padding: 0; line-height: 1.4;
+      font-family: inherit; letter-spacing: -0.01em;
+    }
+    .panel-close {
+      background: none; border: none; cursor: pointer;
+      color: var(--text-muted); font-size: 15px;
+      padding: 4px 7px; border-radius: 5px; flex-shrink: 0; margin-top: 3px;
+    }
+    .panel-close:hover { background: var(--bg-sub); }
+
+    .prop { display: flex; align-items: center; padding: 6px 20px; min-height: 36px; }
+    .prop:hover { background: var(--bg-sub); }
+    .prop-k { width: 90px; font-size: 12px; color: var(--text-muted); font-weight: 500; flex-shrink: 0; }
+    .prop-v { flex: 1; }
+    .prop-in, .prop-sel {
+      width: 100%; border: 1px solid transparent; outline: none;
+      background: transparent; font-size: 13px; color: var(--text);
+      padding: 3px 7px; border-radius: 5px; font-family: inherit;
+      transition: border-color 0.12s, background 0.12s;
+    }
+    .prop-in:hover, .prop-sel:hover { border-color: var(--border); background: var(--bg-sub); }
+    .prop-in:focus, .prop-sel:focus { border-color: var(--accent); background: white; }
+
+    .p-sec {
+      padding: 14px 20px 6px;
+      font-size: 11px; font-weight: 600; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 0.06em;
+      border-top: 1px solid var(--border); margin-top: 6px;
+    }
+
+    .desc-wrap { padding: 4px 20px 10px; }
+    .desc-ta {
+      width: 100%; border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 10px 12px; font-size: 13px; resize: vertical; min-height: 80px;
+      outline: none; font-family: inherit; color: var(--text);
+      background: var(--bg-sub); line-height: 1.6;
+      transition: border-color 0.12s, background 0.12s;
+    }
+    .desc-ta:focus { border-color: var(--accent); background: white; }
+
+    .st-list { padding: 4px 20px 6px; display: flex; flex-direction: column; gap: 2px; }
+    .st-item { display: flex; align-items: center; gap: 8px; padding: 5px 6px; border-radius: 6px; }
+    .st-item:hover { background: var(--bg-sub); }
+    .st-cb { width: 15px; height: 15px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
+    .st-txt { flex: 1; border: none; outline: none; background: transparent; font-size: 13px; color: var(--text); font-family: inherit; padding: 0; }
+    .st-txt.checked { text-decoration: line-through; color: var(--text-subtle); }
+    .st-del { opacity: 0; background: none; border: none; cursor: pointer; color: var(--text-subtle); font-size: 12px; padding: 2px 5px; border-radius: 3px; }
+    .st-item:hover .st-del { opacity: 1; }
+    .st-del:hover { background: #fee2e2; color: #b91c1c; }
+
+    .st-add-row { display: flex; align-items: center; padding: 5px 26px; }
+    .st-add-in {
+      flex: 1; border: none; border-bottom: 1px dashed var(--border);
+      outline: none; font-size: 13px; padding: 4px 0;
+      background: transparent; color: var(--text); font-family: inherit;
+      transition: border-color 0.12s;
+    }
+    .st-add-in:focus { border-bottom-color: var(--accent); }
+    .st-add-in::placeholder { color: var(--text-subtle); }
+
+    .st-hdr {
+      padding: 14px 20px 8px;
+      display: flex; align-items: center; gap: 8px;
+      border-top: 1px solid var(--border); margin-top: 6px;
+    }
+    .st-hdr-label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+    .st-bar { flex: 1; height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; }
+    .st-bar-fill { height: 100%; background: var(--accent); border-radius: 3px; transition: width 0.3s; }
+    .st-bar-num { font-size: 11px; color: var(--text-muted); min-width: 28px; text-align: right; }
+
+    .memo-list { padding: 4px 20px 8px; display: flex; flex-direction: column; gap: 8px; }
+    .memo-item { background: var(--bg-sub); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; }
+    .memo-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+    .memo-date { font-size: 11px; color: var(--text-subtle); }
+    .memo-del { background: none; border: none; cursor: pointer; color: var(--text-subtle); font-size: 12px; padding: 2px 6px; border-radius: 3px; }
+    .memo-del:hover { background: #fee2e2; color: #b91c1c; }
+    .memo-body { font-size: 13px; color: var(--text); white-space: pre-wrap; line-height: 1.6; }
+
+    .memo-add-wrap { padding: 4px 20px 24px; }
+    .memo-ta {
+      width: 100%; border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 9px 12px; font-size: 13px; resize: none; min-height: 70px;
+      outline: none; font-family: inherit; background: var(--bg-sub); color: var(--text);
+      line-height: 1.6; transition: border-color 0.12s, background 0.12s;
+    }
+    .memo-ta:focus { border-color: var(--accent); background: white; }
+    .memo-foot { margin-top: 6px; display: flex; justify-content: flex-end; }
+
+    /* ── Modal ── */
+    #modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.35); z-index: 200;
+      align-items: center; justify-content: center;
+    }
+    #modal-overlay.open { display: flex; }
+    .modal {
+      background: white; border-radius: 12px; padding: 24px;
+      width: 90%; max-width: 500px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+    }
+    .modal-title { font-size: 16px; font-weight: 700; margin-bottom: 18px; letter-spacing: -0.01em; }
+    .modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .modal-grid .full { grid-column: 1 / -1; }
+    .m-label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
+    .m-in, .m-sel {
+      width: 100%; padding: 8px 10px;
+      border: 1px solid var(--border); border-radius: 6px;
+      font-size: 13px; outline: none; font-family: inherit; color: var(--text);
+      transition: border-color 0.12s;
+    }
+    .m-in:focus, .m-sel:focus { border-color: var(--accent); }
+    .modal-foot { margin-top: 18px; display: flex; justify-content: flex-end; gap: 8px; }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<header>
+  <span class="h-logo">📋</span>
+  <span class="h-title">タスク管理</span>
+  <nav class="tab-nav">
+    <button class="tab-btn active" data-tab="home" onclick="switchTab('home')">🏠 ホーム</button>
+    <button class="tab-btn" data-tab="list" onclick="switchTab('list')">☰ タスク一覧</button>
+  </nav>
+  <div class="h-space"></div>
+  <button class="btn" onclick="exportJSON()">↓ エクスポート</button>
+  <button class="btn btn-rose" onclick="openModal()">+ 新規タスク</button>
+</header>
+
+<div class="app">
+  <div class="main">
+
+    <!-- ── HOME VIEW ── -->
+    <div class="view" id="v-home">
+      <div class="home-scroll" id="home-scroll">
+        <!-- rendered by renderHome() -->
+      </div>
+    </div>
+
+    <!-- ── LIST VIEW ── -->
+    <div class="view hidden" id="v-list">
+      <div class="toolbar">
+        <input class="t-input" id="search" type="text" placeholder="🔍 タイトル・説明を検索" oninput="renderTable()">
+        <select class="t-select" id="fst" onchange="renderTable()">
+          <option value="">全ステータス</option>
+          <option value="todo">未着手</option>
+          <option value="inprogress">進行中</option>
+          <option value="done">完了</option>
+        </select>
+        <select class="t-select" id="fpr" onchange="renderTable()">
+          <option value="">全優先度</option>
+          <option value="high">🔴 高</option>
+          <option value="medium">🟡 中</option>
+          <option value="low">🟢 低</option>
+        </select>
+        <select class="t-select" id="fsort" onchange="renderTable()">
+          <option value="created">作成日順</option>
+          <option value="deadline">締切日順</option>
+          <option value="priority">優先度順</option>
+        </select>
+        <span class="count-chip" id="cnt"></span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th class="c-cb"></th>
+              <th class="c-title">タイトル</th>
+              <th class="c-who">担当者</th>
+              <th class="c-stat">ステータス</th>
+              <th class="c-pri">優先度</th>
+              <th class="c-date">締切日</th>
+              <th class="c-tags">タグ</th>
+              <th class="c-del"></th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Side panel (shared) -->
+  <div class="side" id="panel"></div>
+</div>
+
+<!-- New task modal -->
+<div id="modal-overlay">
+  <div class="modal">
+    <div class="modal-title">新規タスク</div>
+    <div class="modal-grid">
+      <div class="full">
+        <label class="m-label">タイトル *</label>
+        <input class="m-in" id="m-title" type="text" placeholder="タスク名を入力">
+      </div>
+      <div>
+        <label class="m-label">優先度</label>
+        <select class="m-sel" id="m-pri">
+          <option value="high">🔴 高</option>
+          <option value="medium" selected>🟡 中</option>
+          <option value="low">🟢 低</option>
+        </select>
+      </div>
+      <div>
+        <label class="m-label">ステータス</label>
+        <select class="m-sel" id="m-st">
+          <option value="todo">未着手</option>
+          <option value="inprogress">進行中</option>
+          <option value="done">完了</option>
+        </select>
+      </div>
+      <div>
+        <label class="m-label">締切日</label>
+        <input class="m-in" id="m-dl" type="date">
+      </div>
+      <div>
+        <label class="m-label">担当者</label>
+        <input class="m-in" id="m-who" type="text" placeholder="名前">
+      </div>
+      <div class="full">
+        <label class="m-label">カテゴリ</label>
+        <input class="m-in" id="m-cat" type="text" placeholder="例: 仕事、個人">
+      </div>
+      <div class="full">
+        <label class="m-label">タグ（カンマ区切り）</label>
+        <input class="m-in" id="m-tags" type="text" placeholder="例: 重要, レビュー待ち">
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal()">キャンセル</button>
+      <button class="btn btn-rose" onclick="submitNew()">作成</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ─────────────────────────────────
+   State
+───────────────────────────────── */
+const STORE = 'tasks_v3';
+let tasks  = JSON.parse(localStorage.getItem(STORE) || '[]');
+let active = null;
+let currentTab = 'home';
+
+/* ─────────────────────────────────
+   Consts
+───────────────────────────────── */
+const P_ORDER = { high:0, medium:1, low:2 };
+const P_LABEL = { high:'高', medium:'中', low:'低' };
+const S_LABEL = { todo:'未着手', inprogress:'進行中', done:'完了' };
+const DAY_JP  = ['日','月','火','水','木','金','土'];
+
+/* ─────────────────────────────────
+   Utils
+───────────────────────────────── */
+function save() { localStorage.setItem(STORE, JSON.stringify(tasks)); }
+function byId(id) { return tasks.find(t => t.id === id); }
+function esc(s) {
+  return String(s||'')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function isOver(dl, st) {
+  if (!dl || st === 'done') return false;
+  return new Date(dl) < new Date(new Date().toDateString());
+}
+function initial(n) { return (n||'').trim().charAt(0).toUpperCase() || '?'; }
+function fmtTs(iso) {
+  const d = new Date(iso);
+  return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+
+/* ── Date helpers ── */
+function getMonday(date) {
+  const d = new Date(date);
+  d.setHours(0,0,0,0);
+  const day = d.getDay();
+  d.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
+  return d;
+}
+function addDays(date, n) {
+  const d = new Date(date);
+  d.setDate(d.getDate() + n);
+  return d;
+}
+function toYMD(date) {
+  return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+}
+
+/* ─────────────────────────────────
+   Tab switching
+───────────────────────────────── */
+function switchTab(tab) {
+  currentTab = tab;
+  document.getElementById('v-home').classList.toggle('hidden', tab !== 'home');
+  document.getElementById('v-list').classList.toggle('hidden', tab !== 'list');
+  document.querySelectorAll('.tab-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.tab === tab)
+  );
+  if (tab === 'home') renderHome();
+  else renderTable();
+}
+
+/* ─────────────────────────────────
+   HOME VIEW — weekly calendar
+───────────────────────────────── */
+function renderHome() {
+  const today     = new Date(); today.setHours(0,0,0,0);
+  const todayStr  = toYMD(today);
+  const weekStart = getMonday(today);
+
+  /* Categorise tasks */
+  const overdue = [];
+  const noDate  = [];
+  const byDate  = {};  /* YYYY-MM-DD → task[] */
+
+  tasks.forEach(t => {
+    if (!t.deadline) { noDate.push(t); return; }
+    const dl = new Date(t.deadline); dl.setHours(0,0,0,0);
+    if (dl < weekStart && t.status !== 'done') {
+      overdue.push(t);
+    } else {
+      (byDate[t.deadline] = byDate[t.deadline] || []).push(t);
+    }
+  });
+
+  let html = '';
+
+  /* ── Overdue section ── */
+  if (overdue.length) {
+    html += `
+    <div class="cal-section">
+      <div class="sec-head overdue" onclick="toggleSec(this)">
+        <span>⚠ 期限切れ</span>
+        <span class="sec-count">${overdue.length}件</span>
+        <span class="sec-toggle open">▶</span>
+      </div>
+      <div class="sec-chips">
+        ${overdue.map(t => calChip(t, true)).join('')}
+      </div>
+    </div>`;
+  }
+
+  /* ── 8 weeks ── */
+  for (let w = 0; w < 8; w++) {
+    const wMon = addDays(weekStart, w * 7);
+    const wSun = addDays(wMon, 6);
+    const wMonStr = `${wMon.getMonth()+1}/${wMon.getDate()}`;
+    const wSunStr = `${wSun.getMonth()+1}/${wSun.getDate()}`;
+    const isCurrent = w === 0;
+
+    /* Build 7 day columns */
+    let weekHasTasks = false;
+    let daysHtml = '';
+
+    for (let d = 0; d < 7; d++) {
+      const day     = addDays(wMon, d);
+      const dayStr  = toYMD(day);
+      const dayNum  = day.getDate();
+      const dow     = day.getDay(); /* 0=Sun */
+      const isToday = dayStr === todayStr;
+      const isPast  = day < today;
+      const isSat   = dow === 6;
+      const isSun   = dow === 0;
+      const dayName = DAY_JP[dow];
+
+      const dayTasks = byDate[dayStr] || [];
+      if (dayTasks.length) weekHasTasks = true;
+
+      const colCls = [
+        isToday ? 'is-today' : '',
+        isPast && !isToday ? 'is-past' : '',
+        isSat ? 'is-sat' : '',
+        isSun ? 'is-sun' : '',
+      ].filter(Boolean).join(' ');
+
+      daysHtml += `
+      <div class="day-col ${colCls}">
+        <div class="day-head">
+          <span class="day-name">${dayName}</span>
+          <span class="day-num">${dayNum}</span>
+        </div>
+        <div class="day-tasks">
+          ${dayTasks.map(t => calChip(t, false)).join('')}
+        </div>
+      </div>`;
+    }
+
+    const wLabel = isCurrent ? '今週' : `${w}週後`;
+
+    html += `
+    <div class="week-block ${isCurrent ? 'is-current' : ''}">
+      <div class="week-head">
+        <span class="wk-label">${wLabel}</span>
+        <span class="wk-range">${wMonStr}(月) – ${wSunStr}(日)</span>
+        ${!weekHasTasks ? '<span class="wk-empty">タスクなし</span>' : ''}
+      </div>
+      <div class="week-grid">${daysHtml}</div>
+    </div>`;
+  }
+
+  /* ── 期限なし section ── */
+  if (noDate.length) {
+    html += `
+    <div class="cal-section">
+      <div class="sec-head nodate" onclick="toggleSec(this)">
+        <span>📌 期限なし</span>
+        <span class="sec-count">${noDate.length}件</span>
+        <span class="sec-toggle open">▶</span>
+      </div>
+      <div class="sec-chips">
+        ${noDate.map(t => calChip(t, false)).join('')}
+      </div>
+    </div>`;
+  }
+
+  if (!html) {
+    html = `<div style="text-align:center;padding:80px 0;color:var(--text-subtle);">
+      <div style="font-size:32px;margin-bottom:12px;">📭</div>
+      <p>タスクがありません。「+ 新規タスク」から追加してください。</p>
+    </div>`;
+  }
+
+  document.getElementById('home-scroll').innerHTML = html;
+  highlightActiveChips();
+}
+
+function calChip(t, isOver) {
+  const doneClass = t.status === 'done' ? 'chip-done' : '';
+  const overClass = isOver ? 'chip-over' : '';
+  const actClass  = t.id === active ? 'active-chip' : '';
+  return `<div class="cal-chip p-${t.priority} ${doneClass} ${overClass} ${actClass}"
+    onclick="selectTask('${t.id}')" title="${esc(t.title)}" data-cid="${t.id}">
+    <span class="chip-ttl">${esc(t.title)}</span>
+    <span class="chip-st">${S_LABEL[t.status]}</span>
+  </div>`;
+}
+
+function toggleSec(head) {
+  const chips  = head.nextElementSibling;
+  const toggle = head.querySelector('.sec-toggle');
+  const isOpen = toggle.classList.contains('open');
+  chips.style.display  = isOpen ? 'none' : 'flex';
+  toggle.classList.toggle('open', !isOpen);
+}
+
+function highlightActiveChips() {
+  document.querySelectorAll('.cal-chip').forEach(el => {
+    el.classList.toggle('active-chip', el.dataset.cid === active);
+  });
+}
+
+/* ─────────────────────────────────
+   LIST VIEW — table
+───────────────────────────────── */
+function filtered() {
+  const q    = document.getElementById('search').value.toLowerCase();
+  const fst  = document.getElementById('fst').value;
+  const fpr  = document.getElementById('fpr').value;
+  const sort = document.getElementById('fsort').value;
+
+  let list = tasks.filter(t => {
+    if (q && !t.title.toLowerCase().includes(q) && !(t.desc||'').toLowerCase().includes(q)) return false;
+    if (fst && t.status !== fst) return false;
+    if (fpr && t.priority !== fpr) return false;
+    return true;
+  });
+
+  if (sort === 'priority') list.sort((a,b) => P_ORDER[a.priority] - P_ORDER[b.priority]);
+  else if (sort === 'deadline') list.sort((a,b) => {
+    if (!a.deadline && !b.deadline) return 0;
+    if (!a.deadline) return 1; if (!b.deadline) return -1;
+    return new Date(a.deadline) - new Date(b.deadline);
+  });
+  return list;
+}
+
+function renderTable() {
+  const list  = filtered();
+  const tbody = document.getElementById('tbody');
+  const done  = tasks.filter(t => t.status === 'done').length;
+  document.getElementById('cnt').textContent = `${done} / ${tasks.length} 完了`;
+
+  if (!list.length) {
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="8">📭 タスクがありません</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = list.map(t => {
+    const doneClass = t.status === 'done' ? 's-done' : '';
+    const subs = t.subtasks || [];
+    let progHtml = '';
+    if (subs.length) {
+      const dn  = subs.filter(s => s.done).length;
+      const pct = Math.round(dn / subs.length * 100);
+      progHtml = `<div class="row-prog">
+        <div class="prog-track"><div class="prog-fill" style="width:${pct}%"></div></div>
+        <span class="prog-num">${dn}/${subs.length}</span>
+      </div>`;
+    }
+    const whoHtml = t.assignee
+      ? `<div class="who-cell"><div class="avatar">${esc(initial(t.assignee))}</div>${esc(t.assignee)}</div>`
+      : `<span style="color:var(--text-subtle);font-size:12px;">—</span>`;
+
+    const over = isOver(t.deadline, t.status);
+    const dateHtml = t.deadline
+      ? `<span class="date-txt${over?' date-over':''}">${t.deadline}${over?' ⚠':''}</span>`
+      : `<span style="color:var(--text-subtle);font-size:12px;">—</span>`;
+
+    const tagsHtml = (t.tags||[]).map(g => `<span class="badge tag-chip">#${esc(g)}</span>`).join('');
+
+    return `
+    <tr class="${t.id === active ? 'is-active' : ''}" data-id="${t.id}" onclick="selectTask('${t.id}')">
+      <td class="c-cb td-cb" onclick="event.stopPropagation()">
+        <input type="checkbox" class="row-cb" ${t.status==='done'?'checked':''}
+          onchange="toggleDone('${t.id}',this.checked)">
+      </td>
+      <td class="c-title"><div class="td-p">
+        <div class="title-wrap">
+          <span class="row-ttl ${doneClass}">${esc(t.title)}</span>
+          ${progHtml}
+        </div>
+      </div></td>
+      <td class="c-who"><div class="td-p">${whoHtml}</div></td>
+      <td class="c-stat"><div class="td-p"><span class="badge s-${t.status}">${S_LABEL[t.status]}</span></div></td>
+      <td class="c-pri"><div class="td-p"><span class="badge p-${t.priority}">${P_LABEL[t.priority]}</span></div></td>
+      <td class="c-date"><div class="td-p">${dateHtml}</div></td>
+      <td class="c-tags"><div class="td-p">${tagsHtml}</div></td>
+      <td class="c-del td-dl" onclick="event.stopPropagation()">
+        <button class="row-del" onclick="delTask('${t.id}')">✕</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+/* ─────────────────────────────────
+   Shared render trigger
+───────────────────────────────── */
+function renderCurrent() {
+  if (currentTab === 'home') renderHome();
+  else renderTable();
+}
+
+/* ─────────────────────────────────
+   Task actions
+───────────────────────────────── */
+function patch(id, data) {
+  const t = byId(id); if (!t) return;
+  Object.assign(t, data); save();
+}
+
+function toggleDone(id, checked) {
+  patch(id, { status: checked ? 'done' : 'todo' });
+  renderTable();
+  if (active === id) renderPanel();
+}
+
+function delTask(id) {
+  if (!confirm('このタスクを削除しますか？')) return;
+  tasks = tasks.filter(t => t.id !== id);
+  if (active === id) closePanel();
+  save(); renderCurrent();
+}
+
+function selectTask(id) {
+  if (active === id) { closePanel(); return; }
+  active = id;
+  document.getElementById('panel').classList.add('open');
+  renderPanel();
+  if (currentTab === 'home') highlightActiveChips();
+  else renderTable();
+}
+
+function closePanel() {
+  active = null;
+  document.getElementById('panel').classList.remove('open');
+  if (currentTab === 'home') highlightActiveChips();
+  else renderTable();
+}
+
+/* ─────────────────────────────────
+   Side panel
+───────────────────────────────── */
+function renderPanel() {
+  const t = byId(active); if (!t) return;
+  const subs  = t.subtasks || [];
+  const doneN = subs.filter(s => s.done).length;
+  const pct   = subs.length ? Math.round(doneN / subs.length * 100) : 0;
+
+  const stRows = subs.map(s => `
+    <div class="st-item" data-sid="${s.id}">
+      <input type="checkbox" class="st-cb" ${s.done?'checked':''}
+        onchange="toggleSub('${t.id}','${s.id}',this.checked)">
+      <input type="text" class="st-txt ${s.done?'checked':''}" value="${esc(s.text)}"
+        onblur="updateSubText('${t.id}','${s.id}',this.value)">
+      <button class="st-del" onclick="delSub('${t.id}','${s.id}')">✕</button>
+    </div>`).join('');
+
+  const memos = t.memos || [];
+  const memoRows = memos.length
+    ? memos.map(m => `
+      <div class="memo-item">
+        <div class="memo-meta">
+          <span class="memo-date">${fmtTs(m.createdAt)}</span>
+          <button class="memo-del" onclick="delMemo('${t.id}','${m.id}')">削除</button>
+        </div>
+        <div class="memo-body">${esc(m.text)}</div>
+      </div>`).join('')
+    : `<p style="font-size:12px;color:var(--text-subtle);padding:0 0 4px;">まだメモがありません</p>`;
+
+  document.getElementById('panel').innerHTML = `
+    <div class="panel-head">
+      <input class="panel-title" type="text" value="${esc(t.title)}"
+        onblur="saveRefresh('${t.id}','title',this.value)"
+        onkeydown="if(event.key==='Enter')this.blur()">
+      <button class="panel-close" onclick="closePanel()">✕</button>
+    </div>
+    <div>
+      <div class="prop">
+        <span class="prop-k">ステータス</span>
+        <div class="prop-v">
+          <select class="prop-sel" onchange="saveRefresh('${t.id}','status',this.value)">
+            <option value="todo"       ${t.status==='todo'      ?'selected':''}>未着手</option>
+            <option value="inprogress" ${t.status==='inprogress'?'selected':''}>進行中</option>
+            <option value="done"       ${t.status==='done'      ?'selected':''}>完了</option>
+          </select>
+        </div>
+      </div>
+      <div class="prop">
+        <span class="prop-k">優先度</span>
+        <div class="prop-v">
+          <select class="prop-sel" onchange="saveRefresh('${t.id}','priority',this.value)">
+            <option value="high"   ${t.priority==='high'  ?'selected':''}>🔴 高</option>
+            <option value="medium" ${t.priority==='medium'?'selected':''}>🟡 中</option>
+            <option value="low"    ${t.priority==='low'   ?'selected':''}>🟢 低</option>
+          </select>
+        </div>
+      </div>
+      <div class="prop">
+        <span class="prop-k">担当者</span>
+        <div class="prop-v">
+          <input class="prop-in" type="text" value="${esc(t.assignee||'')}" placeholder="未設定"
+            onblur="saveRefresh('${t.id}','assignee',this.value)">
+        </div>
+      </div>
+      <div class="prop">
+        <span class="prop-k">締切日</span>
+        <div class="prop-v">
+          <input class="prop-in" type="date" value="${t.deadline||''}"
+            onchange="saveRefresh('${t.id}','deadline',this.value)">
+        </div>
+      </div>
+      <div class="prop">
+        <span class="prop-k">カテゴリ</span>
+        <div class="prop-v">
+          <input class="prop-in" type="text" value="${esc(t.category||'')}" placeholder="未設定"
+            onblur="saveRefresh('${t.id}','category',this.value)">
+        </div>
+      </div>
+      <div class="prop">
+        <span class="prop-k">タグ</span>
+        <div class="prop-v">
+          <input class="prop-in" type="text" value="${esc((t.tags||[]).join(', '))}"
+            placeholder="カンマ区切り"
+            onblur="saveTags('${t.id}',this.value)">
+        </div>
+      </div>
+      <div class="p-sec">説明</div>
+      <div class="desc-wrap">
+        <textarea class="desc-ta" placeholder="詳細をここに..."
+          onblur="saveRefresh('${t.id}','desc',this.value)">${esc(t.desc||'')}</textarea>
+      </div>
+      <div class="st-hdr">
+        <span class="st-hdr-label">サブタスク</span>
+        <div class="st-bar"><div class="st-bar-fill" style="width:${pct}%"></div></div>
+        <span class="st-bar-num">${subs.length ? `${doneN}/${subs.length}` : '0/0'}</span>
+      </div>
+      <div class="st-list">${stRows}</div>
+      <div class="st-add-row">
+        <input class="st-add-in" id="st-new" type="text" placeholder="+ サブタスクを追加して Enter"
+          onkeydown="if(event.key==='Enter'&&this.value.trim()){addSub('${t.id}',this.value.trim());this.value=''}">
+      </div>
+      <div class="p-sec" style="margin-top:10px;">メモ</div>
+      <div class="memo-list">${memoRows}</div>
+      <div class="memo-add-wrap">
+        <textarea class="memo-ta" id="memo-new" placeholder="メモを入力..."></textarea>
+        <div class="memo-foot">
+          <button class="btn btn-rose" style="font-size:12px;padding:5px 12px;"
+            onclick="addMemo('${t.id}')">追加</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function saveRefresh(id, key, val) {
+  patch(id, { [key]: val });
+  if (currentTab === 'home') highlightActiveChips();
+  else renderTable();
+}
+
+function saveTags(id, val) {
+  patch(id, { tags: val.split(',').map(s=>s.trim()).filter(Boolean) });
+  if (currentTab === 'list') renderTable();
+}
+
+/* ─────────────────────────────────
+   Subtasks
+───────────────────────────────── */
+function addSub(tid, text) {
+  const t = byId(tid); if (!t) return;
+  (t.subtasks = t.subtasks||[]).push({ id: Date.now().toString(), text, done: false });
+  save(); renderPanel(); renderCurrent();
+}
+
+function toggleSub(tid, sid, done) {
+  const t = byId(tid); if (!t) return;
+  const s = (t.subtasks||[]).find(s => s.id === sid);
+  if (s) s.done = done;
+  save();
+  if (currentTab === 'list') renderTable();
+  const el = document.querySelector(`[data-sid="${sid}"] .st-txt`);
+  if (el) el.classList.toggle('checked', done);
+  const subs  = t.subtasks||[];
+  const dn    = subs.filter(s=>s.done).length;
+  const pct   = subs.length ? Math.round(dn/subs.length*100) : 0;
+  const fill  = document.querySelector('.st-bar-fill');
+  const num   = document.querySelector('.st-bar-num');
+  if (fill) fill.style.width = pct+'%';
+  if (num)  num.textContent = `${dn}/${subs.length}`;
+}
+
+function updateSubText(tid, sid, text) {
+  const t = byId(tid); if (!t) return;
+  const s = (t.subtasks||[]).find(s=>s.id===sid);
+  if (s) { s.text = text; save(); }
+}
+
+function delSub(tid, sid) {
+  const t = byId(tid); if (!t) return;
+  t.subtasks = (t.subtasks||[]).filter(s=>s.id!==sid);
+  save(); renderPanel(); renderCurrent();
+}
+
+/* ─────────────────────────────────
+   Memos
+───────────────────────────────── */
+function addMemo(tid) {
+  const ta = document.getElementById('memo-new');
+  const text = (ta?.value||'').trim(); if (!text) return;
+  const t = byId(tid); if (!t) return;
+  (t.memos = t.memos||[]).unshift({ id: Date.now().toString(), text, createdAt: new Date().toISOString() });
+  save(); ta.value = ''; renderPanel();
+}
+
+function delMemo(tid, mid) {
+  const t = byId(tid); if (!t) return;
+  t.memos = (t.memos||[]).filter(m=>m.id!==mid);
+  save(); renderPanel();
+}
+
+/* ─────────────────────────────────
+   Modal
+───────────────────────────────── */
+function openModal() {
+  document.getElementById('modal-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('m-title').focus(), 60);
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  ['m-title','m-dl','m-who','m-cat','m-tags'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value='';
+  });
+  document.getElementById('m-pri').value = 'medium';
+  document.getElementById('m-st').value  = 'todo';
+}
+
+function submitNew() {
+  const title = document.getElementById('m-title').value.trim();
+  if (!title) { document.getElementById('m-title').focus(); return; }
+  const task = {
+    id:       Date.now().toString(),
+    title,
+    desc:     '',
+    priority: document.getElementById('m-pri').value,
+    status:   document.getElementById('m-st').value,
+    deadline: document.getElementById('m-dl').value,
+    category: document.getElementById('m-cat').value.trim(),
+    tags:     document.getElementById('m-tags').value.split(',').map(s=>s.trim()).filter(Boolean),
+    assignee: document.getElementById('m-who').value.trim(),
+    subtasks: [], memos: [],
+    created:  new Date().toISOString(),
+  };
+  tasks.unshift(task); save();
+  closeModal();
+  renderCurrent();
+  selectTask(task.id);
+}
+
+/* ─────────────────────────────────
+   Export
+───────────────────────────────── */
+function exportJSON() {
+  const blob = new Blob([JSON.stringify(tasks, null, 2)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = `tasks_${new Date().toISOString().slice(0,10)}.json`;
+  a.click(); URL.revokeObjectURL(url);
+}
+
+/* ─────────────────────────────────
+   Keyboard shortcuts
+───────────────────────────────── */
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape')           { closeModal(); if (active) closePanel(); }
+  if ((e.ctrlKey||e.metaKey) && e.key === 'k') { e.preventDefault(); openModal(); }
+  if ((e.ctrlKey||e.metaKey) && e.key === '1') { e.preventDefault(); switchTab('home'); }
+  if ((e.ctrlKey||e.metaKey) && e.key === '2') { e.preventDefault(); switchTab('list'); }
+});
+
+document.getElementById('modal-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal-overlay')) closeModal();
+});
+
+/* ─────────────────────────────────
+   Init
+───────────────────────────────── */
+renderHome();
+</script>
+</body>
+</html>

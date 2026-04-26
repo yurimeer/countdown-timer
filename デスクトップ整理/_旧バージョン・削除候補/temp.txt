@@ -1,0 +1,6 @@
+temporary file - delete later
+
+copy paste work area:
+
+SELECT * FROM users WHERE id = 1234;
+{"status": "ok", "data": null}

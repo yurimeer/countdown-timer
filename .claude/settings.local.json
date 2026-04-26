@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git init *)",
+      "Bash(git config *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git branch *)",
+      "Bash(git remote *)",
+      "Bash(git push *)",
+      "Bash(npm install *)",
+      "Bash(vercel --version)",
+      "Bash(vercel --prod --yes)",
+      "Bash(export VERCEL_TOKEN=\"vcp_0o678TdIqGoT36sMut8YzvxHxnb9YIvYmCumE80c49YCy8JWs54PFRm3\")",
+      "Bash(vercel --prod --yes --scope yuris-projects-38762994)",
+      "Bash(vercel --prod --yes --scope yuris-projects-38762994 --name countdown-timer)"
+    ]
+  }
+}

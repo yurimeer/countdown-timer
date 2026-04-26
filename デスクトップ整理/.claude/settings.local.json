@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git clone *)",
+      "Bash(where python *)",
+      "PowerShell(python --version)",
+      "PowerShell($env:PATH -split \";\" | Where-Object { $_ -ne \"\" } | Sort-Object)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:api.github.com)",
+      "Bash(curl -s https://raw.githubusercontent.com/rullerzhou-afk/clawd-on-desk/main/hooks/clawd-hook.js)",
+      "Bash(curl -s https://raw.githubusercontent.com/rullerzhou-afk/clawd-on-desk/main/README.md)",
+      "Bash(git --version)",
+      "PowerShell(node --version)",
+      "Read(//c/Users/yurim/AppData/Roaming/Claude/local-agent-mode-sessions/skills-plugin/890acb8b-b97c-45ac-99d6-b44c7c761c63/4d8a3b32-cd89-4127-9ee5-031d36a2e29b/skills/xlsx/**)",
+      "Bash(python -c ' *)",
+      "Bash(py --version)",
+      "Bash(mkdir -p ~/.claude/skills)",
+      "Bash(cp -r /tmp/course-materials/Skills/pptx_michikusa ~/.claude/skills/)",
+      "WebSearch",
+      "mcp__e11f212e-eb77-4f76-8371-26f27214282a__read_file_content"
+    ]
+  }
+}
